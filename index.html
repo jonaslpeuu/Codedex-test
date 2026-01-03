@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Flux Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-a: #0f172a;
+      --bg-b: #0b1020;
+      --card: rgba(255, 255, 255, 0.04);
+      --accent: #7c3aed;
+      --accent-2: #06b6d4;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --glow: 0 0 25px rgba(124, 58, 237, 0.35);
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, #132240, var(--bg-a)),
+        radial-gradient(circle at 80% 40%, #16182e, var(--bg-b));
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    .chrome {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      padding: 18px;
+      height: 100vh;
+    }
+
+    .panel {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(18px) saturate(140%);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #cbd5f5;
+    }
+
+    .pill {
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      color: #0b0f1c;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      box-shadow: var(--glow);
+    }
+
+    .section {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 12px 12px 10px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button, .slider-row input[type="range"], select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    button:hover, select:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.24);
+      box-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
+    }
+
+    button.primary {
+      background: linear-gradient(140deg, var(--accent), var(--accent-2));
+      color: #0c1124;
+      box-shadow: var(--glow);
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(124,58,237,0.6), rgba(6,182,212,0.6));
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.2);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 40px 120px rgba(0, 0, 0, 0.55);
+      background: radial-gradient(circle at 30% 30%, rgba(124, 58, 237, 0.08), transparent 45%),
+        radial-gradient(circle at 70% 60%, rgba(6, 182, 212, 0.1), transparent 55%),
+        #050814;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      color: rgba(226, 232, 240, 0.8);
+      font-size: 13px;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 420px;
+      justify-content: flex-end;
+    }
+
+    .floating-tip {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      color: rgba(226,232,240,0.7);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    @media (max-width: 1024px) {
+      .chrome { grid-template-columns: 1fr; height: auto; }
+      .canvas-wrap { height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="chrome">
+    <aside class="panel">
+      <div class="title">
+        <h1>Quantum Flux Lab</h1>
+        <div class="pill">Blackbox</div>
+      </div>
+      <div style="color: var(--muted); line-height: 1.6;">
+        Baue und kontrolliere einen lebenden Kosmos. Kombiniere Gravitation, Strömungsfelder
+        und pulsierende Singularitäten in Echtzeit. Alles läuft in einer einzigen Datei –
+        keine externen Abhängigkeiten.
+      </div>
+
+      <div class="section">
+        <h2>Simulation</h2>
+        <div class="controls">
+          <button id="toggle">Pause</button>
+          <button id="reset" class="primary">Reset</button>
+          <button id="burst">Energieimpuls</button>
+          <button id="addSpiral">Spiralcluster</button>
+        </div>
+        <div class="slider-row">
+          <span>Sterne</span>
+          <input type="range" id="count" min="200" max="1200" value="700" />
+          <span id="countVal">700</span>
+        </div>
+        <div class="slider-row">
+          <span>Schwerkraft</span>
+          <input type="range" id="gravity" min="0.2" max="2.0" step="0.05" value="1.1" />
+          <span id="gravityVal">1.10</span>
+        </div>
+        <div class="slider-row">
+          <span>Flow</span>
+          <input type="range" id="flow" min="0" max="2" step="0.05" value="0.6" />
+          <span id="flowVal">0.60</span>
+        </div>
+        <div class="slider-row">
+          <span>Dämpfung</span>
+          <input type="range" id="damping" min="0.85" max="0.995" step="0.002" value="0.96" />
+          <span id="dampingVal">0.960</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Modi</h2>
+        <div class="controls">
+          <button id="modeGravity" class="primary">Gravitationsgewebe</button>
+          <button id="modeFlow">Flux-Field</button>
+        </div>
+        <div class="controls">
+          <button id="toggleTrails">Trails: An</button>
+          <button id="toggleTheme">Theme</button>
+        </div>
+        <div style="font-size: 13px; color: var(--muted); line-height: 1.5;">
+          Klicke in die Leinwand, um Singularitäten zu setzen. Shift + Klick entfernt die nächstgelegene.
+          Halte die Maus gedrückt, um das Strömungsfeld lokal zu verzerren.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Telemetry</h2>
+        <div id="telemetry" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;"></div>
+      </div>
+    </aside>
+
+    <div class="canvas-wrap">
+      <canvas id="universe"></canvas>
+      <div class="hud">
+        <div class="badge"><span>⚡</span><span id="hudStatus">Live</span></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="floating-tip">Klick: Singularität setzen · Shift+Klick: Entfernen · Drag: Raum krümmen</div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('universe');
+    const ctx = canvas.getContext('2d');
+    const hudStatus = document.getElementById('hudStatus');
+    const legend = document.getElementById('legend');
+    const telemetry = document.getElementById('telemetry');
+
+    const controls = {
+      toggle: document.getElementById('toggle'),
+      reset: document.getElementById('reset'),
+      burst: document.getElementById('burst'),
+      addSpiral: document.getElementById('addSpiral'),
+      count: document.getElementById('count'),
+      gravity: document.getElementById('gravity'),
+      flow: document.getElementById('flow'),
+      damping: document.getElementById('damping'),
+      modeGravity: document.getElementById('modeGravity'),
+      modeFlow: document.getElementById('modeFlow'),
+      toggleTrails: document.getElementById('toggleTrails'),
+      toggleTheme: document.getElementById('toggleTheme'),
+      labels: {
+        count: document.getElementById('countVal'),
+        gravity: document.getElementById('gravityVal'),
+        flow: document.getElementById('flowVal'),
+        damping: document.getElementById('dampingVal'),
+      }
+    };
+
+    const state = {
+      particles: [],
+      attractors: [],
+      mode: 'gravity',
+      running: true,
+      trails: true,
+      theme: 0,
+      dimensions: { w: 0, h: 0 },
+      flowCache: [],
+      time: 0,
+      tick: 0,
+      hoverDistortion: null,
+    };
+
+    const rand = (min, max) => Math.random() * (max - min) + min;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      state.dimensions = { w: rect.width, h: rect.height };
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor(x, y, hue) {
+        this.pos = { x, y };
+        this.vel = { x: rand(-0.1, 0.1), y: rand(-0.1, 0.1) };
+        this.acc = { x: 0, y: 0 };
+        this.hue = hue;
+        this.life = rand(0.6, 1.0);
+        this.mass = rand(0.5, 1.4);
+      }
+      applyForce(fx, fy) {
+        this.acc.x += fx / this.mass;
+        this.acc.y += fy / this.mass;
+      }
+      update(dt) {
+        this.vel.x += this.acc.x * dt;
+        this.vel.y += this.acc.y * dt;
+        const damping = parseFloat(controls.damping.value);
+        this.vel.x *= damping;
+        this.vel.y *= damping;
+        this.pos.x += this.vel.x * dt * 60;
+        this.pos.y += this.vel.y * dt * 60;
+        this.acc.x = 0;
+        this.acc.y = 0;
+      }
+      wrap() {
+        const { w, h } = state.dimensions;
+        if (this.pos.x < 0) this.pos.x += w;
+        if (this.pos.x > w) this.pos.x -= w;
+        if (this.pos.y < 0) this.pos.y += h;
+        if (this.pos.y > h) this.pos.y -= h;
+      }
+      draw() {
+        ctx.beginPath();
+        const alpha = this.life * 0.9;
+        ctx.fillStyle = `hsla(${this.hue}, 85%, 65%, ${alpha})`;
+        ctx.arc(this.pos.x, this.pos.y, 1.8 * this.mass, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    class Attractor {
+      constructor(x, y, strength = 1200) {
+        this.pos = { x, y };
+        this.strength = strength;
+        this.phase = rand(0, Math.PI * 2);
+      }
+      influence(p, dt) {
+        const dx = this.pos.x - p.pos.x;
+        const dy = this.pos.y - p.pos.y;
+        const distSq = Math.max(dx * dx + dy * dy, 26);
+        const force = (this.strength * parseFloat(controls.gravity.value)) / distSq;
+        const dist = Math.sqrt(distSq);
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        p.applyForce(fx, fy);
+      }
+      draw() {
+        const pulse = 0.65 + Math.sin(state.time * 2 + this.phase) * 0.25;
+        const r = 10 + pulse * 12;
+        const g = ctx.createRadialGradient(this.pos.x, this.pos.y, 0, this.pos.x, this.pos.y, r * 2.5);
+        g.addColorStop(0, `rgba(124, 58, 237, 0.9)`);
+        g.addColorStop(1, `rgba(6, 182, 212, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(255,255,255,${0.5 + pulse * 0.3})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    class FlowField {
+      constructor(cell = 72) {
+        this.cell = cell;
+        this.reseed();
+      }
+      reseed() {
+        this.seed = Math.random() * 1000;
+      }
+      vector(x, y, t) {
+        const n = this.noise(x * 0.003, y * 0.003, t * 0.03);
+        const angle = n * Math.PI * 2;
+        const mag = parseFloat(controls.flow.value);
+        return { x: Math.cos(angle) * mag, y: Math.sin(angle) * mag };
+      }
+      noise(x, y, z) {
+        const f = (v) => Math.sin(v * 2 + this.seed) * 0.5 + Math.sin(v * 1.3 + this.seed * 1.7) * 0.3;
+        return (f(x + z) + f(y - z) + f(x * 0.7 + y * 0.5 + z * 0.2)) * 0.3 + 0.5;
+      }
+    }
+
+    function spawnParticles(count) {
+      state.particles.length = 0;
+      const { w, h } = state.dimensions;
+      for (let i = 0; i < count; i++) {
+        const angle = rand(0, Math.PI * 2);
+        const radius = Math.pow(Math.random(), 1.7) * Math.min(w, h) * 0.45;
+        const x = w / 2 + Math.cos(angle) * radius + rand(-40, 40);
+        const y = h / 2 + Math.sin(angle) * radius + rand(-40, 40);
+        const hue = 190 + rand(-40, 80);
+        state.particles.push(new Particle(x, y, hue));
+      }
+    }
+
+    function seedAttractors() {
+      state.attractors = [
+        new Attractor(state.dimensions.w * 0.42, state.dimensions.h * 0.48, 1800),
+        new Attractor(state.dimensions.w * 0.58, state.dimensions.h * 0.52, 1600),
+      ];
+    }
+
+    const flowField = new FlowField();
+
+    function tick(dt) {
+      state.time += dt;
+      state.tick++;
+      if (!state.running) return;
+
+      if (!state.trails) ctx.clearRect(0, 0, state.dimensions.w, state.dimensions.h);
+      else ctx.fillStyle = 'rgba(5, 8, 20, 0.09)', ctx.fillRect(0, 0, state.dimensions.w, state.dimensions.h);
+
+      const distortion = state.hoverDistortion;
+      for (const p of state.particles) {
+        if (state.mode === 'gravity') {
+          for (const a of state.attractors) a.influence(p, dt);
+        }
+        const f = flowField.vector(p.pos.x, p.pos.y, state.time);
+        p.applyForce(f.x, f.y);
+
+        if (distortion) {
+          const dx = distortion.x - p.pos.x;
+          const dy = distortion.y - p.pos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) + 1e-3;
+          const factor = 80 / dist;
+          p.applyForce(-dy * 0.05 * factor, dx * 0.05 * factor);
+        }
+
+        p.update(dt);
+        p.wrap();
+        p.draw();
+      }
+      for (const a of state.attractors) a.draw();
+
+      renderHUD();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      tick(dt);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    function renderHUD() {
+      hudStatus.textContent = state.running ? 'Live' : 'Pausiert';
+      legend.innerHTML = '';
+      const badges = [
+        { label: 'Mode', value: state.mode === 'gravity' ? 'Gravitationsgewebe' : 'Flux-Field' },
+        { label: 'Attractor', value: state.attractors.length },
+        { label: 'Trails', value: state.trails ? 'On' : 'Off' },
+        { label: 'Partikel', value: state.particles.length },
+      ];
+      badges.forEach(({ label, value }) => {
+        const el = document.createElement('div');
+        el.className = 'badge';
+        el.textContent = `${label}: ${value}`;
+        legend.appendChild(el);
+      });
+
+      telemetry.innerHTML = '';
+      const metrics = [
+        ['Energie', computeEnergy().toFixed(2)],
+        ['Zeit', state.time.toFixed(1) + 's'],
+        ['Flux', controls.flow.value],
+        ['Gravitation', controls.gravity.value],
+        ['Dämpfung', controls.damping.value],
+      ];
+      for (const [k, v] of metrics) {
+        const row = document.createElement('div');
+        row.textContent = `${k}: ${v}`;
+        telemetry.appendChild(row);
+      }
+    }
+
+    function computeEnergy() {
+      let e = 0;
+      for (const p of state.particles) {
+        e += p.vel.x * p.vel.x + p.vel.y * p.vel.y;
+      }
+      return Math.sqrt(e / state.particles.length + 1e-5);
+    }
+
+    function pulseBurst() {
+      state.particles.forEach((p) => {
+        const angle = rand(0, Math.PI * 2);
+        const magnitude = rand(2, 7) * parseFloat(controls.flow.value + 1);
+        p.applyForce(Math.cos(angle) * magnitude, Math.sin(angle) * magnitude);
+      });
+    }
+
+    function spawnSpiral() {
+      const { w, h } = state.dimensions;
+      const center = { x: rand(w * 0.35, w * 0.65), y: rand(h * 0.35, h * 0.65) };
+      for (let i = 0; i < 60; i++) {
+        const angle = i * 0.2;
+        const radius = 12 + i * 3;
+        const x = center.x + Math.cos(angle) * radius;
+        const y = center.y + Math.sin(angle) * radius;
+        const a = new Attractor(x, y, 1200 + Math.sin(angle * 3) * 400);
+        a.phase = angle;
+        state.attractors.push(a);
+      }
+    }
+
+    function toggleTheme() {
+      state.theme = (state.theme + 1) % 2;
+      if (state.theme === 0) {
+        document.documentElement.style.setProperty('--accent', '#7c3aed');
+        document.documentElement.style.setProperty('--accent-2', '#06b6d4');
+        document.body.style.background = 'radial-gradient(circle at 20% 20%, #132240, #0f172a), radial-gradient(circle at 80% 40%, #16182e, #0b1020)';
+      } else {
+        document.documentElement.style.setProperty('--accent', '#10b981');
+        document.documentElement.style.setProperty('--accent-2', '#f59e0b');
+        document.body.style.background = 'radial-gradient(circle at 20% 20%, #0f1d2e, #0b1220), radial-gradient(circle at 80% 40%, #1a0f2e, #0b0f18)';
+      }
+    }
+
+    function syncLabels() {
+      controls.labels.count.textContent = controls.count.value;
+      controls.labels.gravity.textContent = parseFloat(controls.gravity.value).toFixed(2);
+      controls.labels.flow.textContent = parseFloat(controls.flow.value).toFixed(2);
+      controls.labels.damping.textContent = parseFloat(controls.damping.value).toFixed(3);
+    }
+
+    controls.count.addEventListener('input', () => {
+      syncLabels();
+      spawnParticles(parseInt(controls.count.value, 10));
+    });
+    controls.gravity.addEventListener('input', syncLabels);
+    controls.flow.addEventListener('input', syncLabels);
+    controls.damping.addEventListener('input', syncLabels);
+
+    controls.toggle.addEventListener('click', () => {
+      state.running = !state.running;
+      controls.toggle.textContent = state.running ? 'Pause' : 'Start';
+    });
+    controls.reset.addEventListener('click', () => {
+      flowField.reseed();
+      seedAttractors();
+      spawnParticles(parseInt(controls.count.value, 10));
+    });
+    controls.burst.addEventListener('click', pulseBurst);
+    controls.addSpiral.addEventListener('click', spawnSpiral);
+
+    controls.modeGravity.addEventListener('click', () => {
+      state.mode = 'gravity';
+      controls.modeGravity.classList.add('primary');
+      controls.modeFlow.classList.remove('primary');
+    });
+    controls.modeFlow.addEventListener('click', () => {
+      state.mode = 'flow';
+      controls.modeFlow.classList.add('primary');
+      controls.modeGravity.classList.remove('primary');
+    });
+
+    controls.toggleTrails.addEventListener('click', () => {
+      state.trails = !state.trails;
+      controls.toggleTrails.textContent = `Trails: ${state.trails ? 'An' : 'Aus'}`;
+    });
+    controls.toggleTheme.addEventListener('click', toggleTheme);
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      if (e.shiftKey) {
+        if (state.attractors.length) {
+          let idx = 0;
+          let best = Infinity;
+          state.attractors.forEach((a, i) => {
+            const d = (a.pos.x - pos.x) ** 2 + (a.pos.y - pos.y) ** 2;
+            if (d < best) { best = d; idx = i; }
+          });
+          state.attractors.splice(idx, 1);
+        }
+      } else {
+        state.attractors.push(new Attractor(pos.x, pos.y, rand(1000, 2000)));
+      }
+    });
+
+    let dragging = false;
+    canvas.addEventListener('pointerdown', (e) => { dragging = true; updateDistortion(e); });
+    canvas.addEventListener('pointerup', () => { dragging = false; state.hoverDistortion = null; });
+    canvas.addEventListener('pointermove', (e) => dragging && updateDistortion(e));
+
+    function updateDistortion(e) {
+      const rect = canvas.getBoundingClientRect();
+      state.hoverDistortion = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function init() {
+      seedAttractors();
+      syncLabels();
+      spawnParticles(parseInt(controls.count.value, 10));
+    }
+    init();
+  </script>
+</body>
+</html>
